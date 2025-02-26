@@ -1,6 +1,6 @@
 ### **bootS：轻量如容器，安全如虚拟机，打造极致Linux服务器沙盒环境**
 
-[English](https://github.com/set-io/boots/blob/main/README.md)
+[English](README.md) | [中文](README_zh.md)
 
 在当今云计算和虚拟化技术飞速发展的时代，开发者们对服务器环境的隔离性、安全性和效率提出了更高的要求。传统的虚拟机和容器技术各有优劣，而**bootS**正是为了填补这一空白而生。它结合了容器的轻量性和虚拟机的安全性，为开发者提供了一个简单、快速、可靠的Linux服务器沙盒环境。
 
