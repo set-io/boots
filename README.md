@@ -1,5 +1,7 @@
 # bootS
 
+[Chinese]([https://github.com/set-io/boots/blob/main/README_zh.md])
+
 > **As lightweight as a container, as secure as a virtual machine**
 
 A Linux server sandbox virtualization CLI tool, spawning and running sandbox according to the `OCI specification`.
