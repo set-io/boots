@@ -1,6 +1,6 @@
 # bootS
 
-[Chinese]([https://github.com/set-io/boots/blob/main/README_zh.md])
+[Chinese](https://github.com/set-io/boots/blob/main/README_zh.md)
 
 > **As lightweight as a container, as secure as a virtual machine**
 
