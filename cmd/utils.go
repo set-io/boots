@@ -176,6 +176,7 @@ func bootSandbox(ctx *cli.Context) (int, error) {
 	}
 	s.SetProbe(ctx.Bool("probe"))
 	s.SetStable(ctx.Bool("stable"))
+	s.SetBridge(ctx.GlobalString("bridge"))
 	if err = s.RegisterInitHooks(); err != nil {
 		return -1, err
 	}
@@ -231,9 +232,9 @@ func sandboxSpec(spec *specs.Spec, cipher string) (*sandbox.Config, error) {
 		case "ip":
 			net.IPAddress = v
 		case "gateway":
-			net.Gateway = v
+			net.Subnet.Gateway = v
 		case "subnet":
-			net.Subnet = v
+			net.Subnet.Mask = v
 		case "eth":
 			net.Eth = v
 		default:

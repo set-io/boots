@@ -9,12 +9,14 @@ import (
 	"golang.org/x/sync/errgroup"
 	"log"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 )
 
 type entrypoint struct {
-	id         int
+	id         string
 	Net        string
 	Kernel     string
 	Initrd     string
@@ -106,6 +108,13 @@ func (e *entrypoint) setup(process *specs.Process) (*machine.Machine, error) {
 			return nil, err
 		}
 	}
+
+	if len(e.c.Bridge) > 0 {
+		if err := AddNetwork(e.c.Bridge, e.c.Net.Subnet.String(), e.Interface); err != nil {
+			return nil, err
+		}
+	}
+
 	if debug {
 		log.Println("setup disk")
 	}
@@ -154,8 +163,6 @@ func (e *entrypoint) setup(process *specs.Process) (*machine.Machine, error) {
 }
 
 func (e *entrypoint) run(m *machine.Machine) error {
-	var err error
-
 	trace := e.TraceCount > 0
 	if err := m.SingleStep(trace); err != nil {
 		return fmt.Errorf("setting trace to %v:%w", trace, err)
@@ -184,42 +191,46 @@ func (e *entrypoint) run(m *machine.Machine) error {
 		}
 	}
 
-	if !machine.IsTerminal() {
-		log.Printf("this is not terminal and does not accept input\n")
-		select {}
-	}
+	if machine.IsTerminal() {
+		restoreMode, err := machine.SetRawMode()
+		if err != nil {
+			return err
+		}
 
-	restoreMode, err := machine.SetRawMode()
+		defer restoreMode()
+
+		if err := m.SingleStep(trace); err != nil {
+			log.Printf("singleStep(%v): %v", trace, err)
+			return err
+		}
+
+		in := bufio.NewReader(os.Stdin)
+
+		g.Go(func() error {
+			err := m.GetSerial().Start(*in, restoreMode, m.InjectSerialIRQ)
+			log.Printf("serial exits: %v\n", err)
+			return err
+		})
+		return g.Wait()
+	}
+	return e.wait()
+}
+
+func (e *entrypoint) wait() error {
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	if debug {
+		log.Printf("this is not terminal and does not accept input\n")
+	}
+	err := e.c.Hooks.Run(PostStart,
+		&specs.State{Version: e.c.Version, ID: e.id, Status: specs.StateRunning})
 	if err != nil {
 		return err
 	}
-
-	defer restoreMode()
-
-	if err := m.SingleStep(trace); err != nil {
-		log.Printf("singleStep(%v): %v", trace, err)
-		return err
+	select {
+	case sig := <-sigChan:
+		return fmt.Errorf("received signal: %v", sig)
 	}
-
-	in := bufio.NewReader(os.Stdin)
-
-	g.Go(func() error {
-		err := m.GetSerial().Start(*in, restoreMode, m.InjectSerialIRQ)
-		log.Printf("serial exits: %v\n", err)
-		return err
-	})
-
-	if err := g.Wait(); err != nil {
-		log.Printf("%s\n", err)
-		return err
-	}
-	if debug {
-		log.Printf("all CPUs done\r\n")
-	}
-	return nil
-}
-
-func (e *entrypoint) shutdown() {
 }
 
 func (e *entrypoint) boot(process *specs.Process) error {
@@ -236,7 +247,8 @@ func (e *entrypoint) boot(process *specs.Process) error {
 		if debug {
 			log.Printf("ready booting\n")
 		}
-		err = e.c.Hooks.Run(CreateSandbox, &specs.State{})
+		err = e.c.Hooks.Run(CreateSandbox,
+			&specs.State{ID: e.id, Version: e.c.Version, Status: specs.StateCreated})
 		if err != nil {
 			return err
 		}
@@ -245,6 +257,7 @@ func (e *entrypoint) boot(process *specs.Process) error {
 	if err := e.run(m); err != nil {
 		return err
 	}
+
 	if e.c.Probe {
 		if err := machine.KVMCapabilities(); err != nil {
 			return err
@@ -257,4 +270,7 @@ func (e *entrypoint) boot(process *specs.Process) error {
 		e.shutdown()
 	}()
 	return nil
+}
+
+func (e *entrypoint) shutdown() {
 }

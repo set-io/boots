@@ -59,11 +59,11 @@ type ready struct {
 	s *Sandbox
 }
 
-func (r *ready) Run(st *specs.State) error {
+func (r *ready) Run(s *specs.State) error {
 	if debug {
 		log.Println("flow ready")
 	}
-	return r.s.writeFifo("READY")
+	return r.s.writeFifo(string(s.Status))
 }
 
 type status struct {
@@ -81,5 +81,16 @@ func (s *status) Run(st *specs.State) error {
 	if debug {
 		log.Println("status content ", state)
 	}
+	return nil
+}
+
+type bridge struct {
+	brName string
+	ifa    string
+	net    Net
+}
+
+func (b *bridge) Run(s *specs.State) error {
+
 	return nil
 }

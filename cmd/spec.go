@@ -108,7 +108,7 @@ func specStable() *specs.Spec {
 			"rootfstype": "ext4",
 			"ip":         "",
 			"gateway":    "",
-			"subnet":     "",
+			"mask":       "",
 			"eth":        "",
 		},
 		VM: &specs.VM{
@@ -190,7 +190,7 @@ func specDebug() *specs.Spec {
 			"rootfstype": "ext4",
 			"ip":         "",
 			"gateway":    "",
-			"subnet":     "",
+			"mask":       "",
 			"eth":        "",
 		},
 		VM: &specs.VM{

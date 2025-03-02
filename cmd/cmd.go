@@ -60,6 +60,11 @@ func Execute(name, usage, version, cipher, commit string) {
 			Value: cipher,
 			Usage: "cipher for encrypting sandbox data (default is 'md5')",
 		},
+		cli.StringFlag{
+			Name:  "bridge, br",
+			Value: "boots0",
+			Usage: "bridge interface to use for network communication",
+		},
 	}
 	app.Commands = []cli.Command{
 		createCommand,

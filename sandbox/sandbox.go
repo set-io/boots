@@ -47,6 +47,12 @@ func (s *Sandbox) SetProbe(probe bool) {
 	s.config.Probe = probe
 }
 
+func (s *Sandbox) SetBridge(br string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.config.Bridge = br
+}
+
 func (s *Sandbox) SetStable(stable bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -335,11 +341,21 @@ func (s *Sandbox) RegisterInitHooks() error {
 	defer s.mu.Unlock()
 	err := s.config.Hooks.Register(CreateSandbox, &ready{s})
 	if err != nil {
-		return fmt.Errorf("failed to register hook: %w", err)
+		return fmt.Errorf("failed to register ready hook: %w", err)
 	}
 	err = s.config.Hooks.Register(StartSandbox, &status{s})
 	if err != nil {
-		return fmt.Errorf("failed to register hook: %w", err)
+		return fmt.Errorf("failed to register status hook: %w", err)
+	}
+
+	ifa, ok := utils.SearchArrays(s.config.HypervisorParameters, "interface")
+	if !ok {
+		return fmt.Errorf("missing interface label in hypervisor parameters")
+	}
+
+	err = s.config.Hooks.Register(PostStart, &bridge{brName: s.config.Bridge, net: s.config.Net, ifa: ifa})
+	if err != nil {
+		return fmt.Errorf("failed to register bridge hook: %w", err)
 	}
 	return nil
 }
@@ -362,7 +378,7 @@ func (s *Sandbox) Boot(config *specs.Process) (int, error) {
 		log.Printf("daemon process id: %d", s.initProcess.pid())
 	}
 
-	e.id = s.initProcess.pid()
+	e.id = s.id
 	if err := e.boot(config); err != nil {
 		return -1, err
 	}
