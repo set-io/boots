@@ -110,7 +110,7 @@ func (e *entrypoint) setup(process *specs.Process) (*machine.Machine, error) {
 	}
 
 	if len(e.c.Bridge) > 0 {
-		if err := AddNetwork(e.c.Bridge, e.c.Net.Subnet.String(), e.Interface); err != nil {
+		if err := e.c.Net.Add(e.c.Bridge, e.Interface); err != nil {
 			return nil, err
 		}
 	}

@@ -1,13 +1,65 @@
 package sandbox
 
 import (
+	"errors"
 	"fmt"
 	"github.com/set-io/boots/utils/iface"
 	"log"
+	"net"
 	"os"
 )
 
-func AddNetwork(br, subnet, ifa string) error {
+type Net struct {
+	IPAddress string `json:"ip_address"`
+	Subnet    Subnet `json:"subnet"`
+	Eth       string `json:"eth"`
+}
+
+type Subnet struct {
+	Gateway string `json:"gateway"`
+	Mask    string `json:"mask"`
+}
+
+func (s Subnet) String() string {
+	n, err := s.MaskToPrefix()
+	if err != nil {
+		panic(err)
+	}
+	return fmt.Sprintf("%s/%d", s.Gateway, n)
+}
+
+func (s Subnet) MaskToPrefix() (int, error) {
+	ip := net.ParseIP(s.Mask)
+	if ip == nil {
+		return 0, fmt.Errorf("invalid mask")
+	}
+	mask := net.IPMask(ip.To4())
+	ones, bits := mask.Size()
+	if bits == 0 {
+		return 0, fmt.Errorf("invalid mask")
+	}
+	return ones, nil
+}
+
+func (n *Net) Validate() error {
+	if n.IPAddress == "" || n.Subnet.Gateway == "" || n.Subnet.Mask == "" {
+		// TODO: ip validate
+		return errors.New("ip_address and gateway must be provided")
+	}
+	return nil
+}
+
+func (n *Net) String() string {
+	if n.Eth == "" {
+		n.Eth = "eth0"
+	}
+	// 192.168.100.18::192.168.100.1:255.255.255.0::eth0:off
+	// https://www.kernel.org/doc/Documentation/filesystems/nfs/nfsroot.txt
+	return fmt.Sprintf("%s::%s:%s::%s:off", n.IPAddress, n.Subnet.Gateway, n.Subnet.Mask, n.Eth)
+}
+
+func (n *Net) Add(br, ifa string) error {
+	subnet := n.Subnet.String()
 	bridge, err := iface.LinkByName(br)
 	if err != nil {
 		bridge = &iface.Bridge{
