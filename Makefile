@@ -1,5 +1,3 @@
-# Makefile for building a Go project
-
 VERSION := $(shell cat VERSION)
 GIT_COMMIT := $(shell git rev-parse HEAD)
 
@@ -14,10 +12,11 @@ endif
 GOOS := linux
 GOARCH := amd64
 BINARY_NAME := boots
+MAIN_PATH := ./app
 
 # Build the binary
 build:
-	@GOOS=$(GOOS) GOARCH=$(GOARCH) go build -ldflags "-X main.version=${VERSION} -X main.cipher=${VERSION_MD5} -X main.gitCommit=${GIT_COMMIT}" -o $(BINARY_NAME)
+	@GOOS=$(GOOS) GOARCH=$(GOARCH) go build -ldflags "-X main.version=${VERSION} -X main.cipher=${VERSION_MD5} -X main.gitCommit=${GIT_COMMIT}" -o $(BINARY_NAME) $(MAIN_PATH)
 
 # Clean up build artifacts
 clean:
